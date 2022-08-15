@@ -524,6 +524,7 @@ void addToDictionary(){
         //printf("word to insert: %s, hash calculated is %d \n", input, index);
         //printList(index);
     }
+
     executeCommand();
 }
 
