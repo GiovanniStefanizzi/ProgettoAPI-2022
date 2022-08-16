@@ -109,6 +109,27 @@ orderNode *insertInOrder(int index, int position) {
     }
 }
 
+
+void tiedInsert(orderNode *node){
+    orderNode *newNode;
+    newNode = (orderNode *) malloc(sizeof(orderNode));
+    newNode->index = node -> index;
+    newNode->position = node -> position;
+    newNode->tiePass = true;
+    newNode->next = NULL;
+    if(tiedHead == NULL){
+        tiedHead = newNode;
+        return;
+    }
+    orderNode *temp;
+    temp = tiedHead;
+    while(temp -> next !=NULL){
+        temp = temp->next;
+    }
+    temp -> next = newNode;
+}
+
+
 void insertWordNode(wordNode *toInsert, int index){
     wordNode *newNode = initWordNode(toInsert->word);
     int position = 0;
@@ -278,34 +299,6 @@ void setExactTimes(char c, bool val){
         sym = symHashSearch(c);
     }
     sym -> exactTimes = val;
-}
-
-bool singleTiePassCheck(const char *word){
-    symbol *sym;
-    int currCount;
-    for(int i=0;i<SYM_TABLE_SIZE;i++){
-        sym = symTable[i];
-        if(sym != NULL){
-            if(!sym->contains){
-                if(contains(word, sym->ch)) return false;
-            }
-            else{
-                currCount = 0;
-                for(int j=0;j<wordLength;j++){
-                    if(sym->mustBeIn[j] && word[j] != sym -> ch) return false;
-                    if(sym->mustNotBeIn[j] && word[j] == sym ->ch) return false;
-                    if(sym->ch == word[j]) currCount ++;
-                }
-                if(sym->exactTimes){
-                    if(sym->times != currCount) return false;
-                }
-                else{
-                    if(currCount < sym -> times) return false;
-                }
-            }
-        }
-    }
-    return true;
 }
 
 void tiePassCheck(){
