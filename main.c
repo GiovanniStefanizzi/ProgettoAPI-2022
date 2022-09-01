@@ -10,12 +10,13 @@ typedef struct wordNode {
     struct wordNode *next;
 }wordNode;
 
-typedef struct orderNode{
+typedef struct BSTNode{
     int index;
     int position;
     bool tiePass;
-    struct orderNode *next;
-}orderNode;
+    struct BSTNode *next;
+    struct BSTNode *left, *right;
+}BSTNode;
 
 typedef struct{
     char ch;
@@ -32,16 +33,18 @@ int wordCount = 0;
 int totalWordCount;
 int attempts = 0;
 wordNode *hashTable[TABLE_SIZE];
-orderNode *head = NULL;
-orderNode *tiedHead = NULL;
+BSTNode *head = NULL;
 symbol *symTable[SYM_TABLE_SIZE];
+BSTNode *root=NULL;
+char *tempWord;
 
 wordNode *initWordNode(char *);
 void executeCommand();
 void addToDictionary();
 char *searchWordByIndex(int, int);
 wordNode *hashSearch(char *);
-char *tempWord;
+bool contains(const char *string, char c);
+
 
 void printOrderedList()
 {
@@ -50,7 +53,7 @@ void printOrderedList()
         printf("list is empty");
         return;
     }
-    orderNode *temp = head;
+    BSTNode *temp = head;
     while(temp!=NULL){
         if(temp->tiePass) {
             //printf("index = %d, position = %d: ", temp->index, temp->position);
@@ -60,6 +63,117 @@ void printOrderedList()
     }
     //printf("");
 }
+
+
+bool isLessThan(const char *a, const char *b){
+    const unsigned char *wa = (const unsigned char *)a;
+    const unsigned char *wb = (const unsigned char *)b;
+    for(int i=0;i<wordLength;i++){
+        if(*wb > *wa) return true;
+        if(*wa > *wb) return false;
+        wa++;
+        wb++;
+    }
+    return false;
+}
+
+
+
+BSTNode *BSTInsert(BSTNode *node, int index, int position){
+    BSTNode *newNode;
+    if(node==NULL){
+        newNode = (BSTNode *) malloc(sizeof(BSTNode));
+        newNode->index = index;
+        newNode->position = position;
+        newNode->tiePass = true;
+        newNode->left = NULL;
+        newNode->right = NULL;
+        return newNode;
+    }
+    const char *toInsert = searchWordByIndex(index, position);
+    const char *inTheNode = searchWordByIndex(node->index, node->position);
+    if(isLessThan(toInsert, inTheNode)) {
+        node->left =  BSTInsert(node->left, index, position);
+    }
+    else node->right = BSTInsert(node->right, index, position);
+    return node;
+}
+
+
+
+
+
+void BSTPrint(BSTNode *node){
+    if(node!=NULL){
+        BSTPrint(node->left);
+        if(node->tiePass) printf("%s\n", searchWordByIndex(node->index, node->position));
+        BSTPrint(node->right);
+    }
+}
+
+void BSTReset(BSTNode *node){
+    if(node!=NULL){
+        BSTReset(node->left);
+        node->tiePass = true;
+        BSTReset(node->right);
+    }
+}
+
+void BSTRemoveContains(symbol *sym, BSTNode *node){
+    if(node != NULL) {
+        BSTRemoveContains(sym, node->left);
+        if (node->tiePass) {
+            tempWord = searchWordByIndex(node->index, node->position);
+            //printf("contains = %d for %s, %c\n", contains(tempWord, sym->ch), tempWord, sym->ch );
+            if (contains(tempWord, sym->ch)) {
+                //printf("contains = %d for %s, %c\n", contains(tempWord, sym->ch), tempWord, sym->ch );
+                node->tiePass = false;
+                wordCount--;
+            }
+        }
+        BSTRemoveContains(sym, node->right);
+    }
+}
+
+void BSTCheckNumAndPosition(symbol *sym, BSTNode *node) {
+    if(node != NULL){
+        BSTCheckNumAndPosition(sym, node->left);
+        bool pass = true;
+        int currCount = 0;
+        if(node->tiePass) {
+            pass = true;
+            currCount = 0;
+            tempWord = searchWordByIndex(node->index, node->position);
+            for (int j = 0; j < wordLength; j++) {
+                if (sym->mustBeIn != NULL && sym->mustBeIn[j] && tempWord[j] != sym->ch) {
+                    pass = false;
+                    break;
+                }
+                if (sym->mustNotBeIn != NULL && sym->mustNotBeIn[j] && tempWord[j] == sym->ch) {
+                    pass = false;
+                    break;
+                }
+                if (sym->ch == tempWord[j]) currCount++;
+            }
+            if (pass) {
+                if (sym->exactTimes) {
+                    if (sym->times != currCount) pass = false;
+                } else {
+                    if (currCount < sym->times) pass = false;
+                }
+            }
+
+            if (!pass) {
+                wordCount--;
+                node->tiePass = false;
+            }
+        }
+        BSTCheckNumAndPosition(sym, node->right);
+    }
+}
+
+
+
 
 void resetSymTable(){
     for(int i=0;i<SYM_TABLE_SIZE;i++){
@@ -73,7 +187,7 @@ void resetSymTable(){
 
 void resetOrderedList(){
     if(head != NULL){
-        orderNode *temp = head;
+        BSTNode *temp = head;
         while(temp != NULL){
             temp->tiePass = true;
             temp = temp -> next;
@@ -81,9 +195,9 @@ void resetOrderedList(){
     }
 }
 
-orderNode *insertInOrder(int index, int position) {
-    orderNode *newNode;
-    newNode = (orderNode *) malloc(sizeof(orderNode));
+BSTNode *insertInOrder(int index, int position) {
+    BSTNode *newNode;
+    newNode = (BSTNode *) malloc(sizeof(BSTNode));
     newNode->index = index;
     newNode->position = position;
     newNode->tiePass = true;
@@ -91,13 +205,13 @@ orderNode *insertInOrder(int index, int position) {
     if (head == NULL) {
         return newNode;
     } else {
-        if (strcmp(searchWordByIndex(index, position), searchWordByIndex(head->index, head->position)) < 0) {
+        if (isLessThan(searchWordByIndex(index, position), searchWordByIndex(head->index, head->position))) {
             newNode->next = head;
             return newNode;
         }
-        orderNode *temp = head;
+        BSTNode *temp = head;
         while (temp->next != NULL) {
-            if (strcmp(searchWordByIndex(index, position), searchWordByIndex(temp->next->index, temp->next->position)) <0) {
+            if (isLessThan(searchWordByIndex(index, position), searchWordByIndex(temp->next->index, temp->next->position))) {
                 newNode->next = temp->next;
                 temp->next = newNode;
                 return head;
@@ -109,31 +223,9 @@ orderNode *insertInOrder(int index, int position) {
     }
 }
 
-
-void tiedInsert(orderNode *node){
-    orderNode *newNode;
-    newNode = (orderNode *) malloc(sizeof(orderNode));
-    newNode->index = node -> index;
-    newNode->position = node -> position;
-    newNode->tiePass = true;
-    newNode->next = NULL;
-    if(tiedHead == NULL){
-        tiedHead = newNode;
-        return;
-    }
-    orderNode *temp;
-    temp = tiedHead;
-    while(temp -> next !=NULL){
-        temp = temp->next;
-    }
-    temp -> next = newNode;
-}
-
-
 void insertWordNode(wordNode *toInsert, int index){
     wordNode *newNode = initWordNode(toInsert->word);
     int position = 0;
-    wordCount++;
     if (hashTable[index] == NULL){
         //newNode->position = 0;
         hashTable[index] = newNode;
@@ -148,7 +240,7 @@ void insertWordNode(wordNode *toInsert, int index){
         //newNode->position = position;
         temp->next = newNode;
     }
-    head = insertInOrder(index, position);
+    root = BSTInsert(root, index, position);
 }
 
 wordNode *initWordNode(char word[]){
@@ -303,62 +395,15 @@ void setExactTimes(char c, bool val){
 
 void tiePassCheck(){
     symbol *sym;
-    orderNode *temp;
-    int currCount;
-    bool pass;
     for(int i=0;i<SYM_TABLE_SIZE;i++){
         sym = symTable[i];
         if(sym != NULL){
-            temp = head;
             if(!sym -> contains){
-                while(temp != NULL){
-                    if(temp -> tiePass) {
-                        tempWord = searchWordByIndex(temp->index, temp -> position);
-                        if (contains(tempWord, sym->ch)) {
-                            temp->tiePass = false;
-                            wordCount--;
-                        }
-                    }
-                    temp = temp->next;
-                }
+                BSTRemoveContains(sym, root);
             }
             else {
-                temp = head;
-                while(temp != NULL){
-                    if(temp->tiePass) {
-                        pass = true;
-                        currCount = 0;
-                        tempWord = searchWordByIndex(temp->index, temp->position);
-                        for (int j = 0; j < wordLength; j++) {
-                            if (sym->mustBeIn != NULL && sym->mustBeIn[j] && tempWord[j] != sym->ch) {
-                                pass = false;
-                                break;
-                            }
-                            if (sym->mustNotBeIn != NULL && sym->mustNotBeIn[j] && tempWord[j] == sym->ch) {
-                                pass = false;
-                                break;
-                            }
-                            if (sym->ch == tempWord[j]) currCount++;
-                        }
-                        if (pass) {
-                            if (sym->exactTimes) {
-                                if (sym->times != currCount) pass = false;
-                            } else {
-                                if (currCount < sym->times) pass = false;
-                            }
-                        }
-
-                        if (!pass) {
-                            wordCount--;
-                            temp->tiePass = false;
-                        }
-
-                    }
-                    temp = temp->next;
-                }
-
+                BSTCheckNumAndPosition(sym, root);
             }
-
         }
     }
 }
@@ -408,9 +453,12 @@ const char  *compareWords(const char * r, const char * s) {
             sym = symHashSearch(s[i]);
             if(sym != NULL && sym -> currTimes > 0){
                 setExactTimes(s[i], true);
+                mustNotBeIn(s[i], i);
             }
             else{
-                setContains(s[i], false);
+                if(sym==NULL) setContains(s[i], false);
+                else if(sym -> contains != true)setContains(s[i], false);
+                //if(s[i]=='G')printf("%d cuinonce in %s\n", i, s);
             }
         }
     }
@@ -419,12 +467,13 @@ const char  *compareWords(const char * r, const char * s) {
 
 
 void startNewMatch(){
+    bool found=false;
     char toBeFound[wordLength];
     char input[wordLength];
     char endInput = 0;
     const char *result;
     wordNode *searched;
-    resetOrderedList();
+    BSTReset(root);
     resetSymTable();
     wordCount = totalWordCount;
     while(getchar()!='\n') continue;
@@ -447,6 +496,7 @@ void startNewMatch(){
                 input[j] = getchar();
             input[wordLength] = '\0';
             searched = hashSearch(input);
+            //printf("%s\n", input);
             if(searched==NULL){
                 printf("not_exists\n");
                 attempts++;
@@ -458,10 +508,13 @@ void startNewMatch(){
                     tiePassCheck();
                     printf("%d\n", wordCount);
                 }
+                else found=true;
             }
             getchar();
             attempts--;
-            if(attempts==0 && result[0]!='o') printf("ko\n");
+            if(attempts==0 && !found) {
+                printf("ko\n");
+            }
         }
     }
     while(endInput!=EOF) {
@@ -493,7 +546,7 @@ void executeCommand(){
     }
     if(command[0]=='s') {
         tiePassCheck();
-        printOrderedList();
+        BSTPrint(root);
         while(getchar()!='\n') continue;
     }
 }
@@ -514,7 +567,7 @@ void addToDictionary(){
         insertWordNode(toInsert, index);
         wordCount++;
         totalWordCount++;
-        //printf("word to insert: %s, hash calculated is %d \n", input, index);
+        //printf("INSERT - wordCount = %d (total = %d)\n", wordCount,  totalWordCount);
         //printList(index);
     }
 
