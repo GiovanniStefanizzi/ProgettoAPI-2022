@@ -37,8 +37,10 @@ BSTNode *head = NULL;
 symbol *symTable[SYM_TABLE_SIZE];
 BSTNode *root=NULL;
 char *tempWord;
+char *input;
+char *result;
 
-wordNode *initWordNode(char *);
+wordNode *initWordNode(const char *);
 void executeCommand();
 void addToDictionary();
 char *searchWordByIndex(int, int);
@@ -137,23 +139,24 @@ void BSTRemoveContains(symbol *sym, BSTNode *node){
 
 void BSTCheckNumAndPosition(symbol *sym, BSTNode *node) {
     if(node != NULL){
+        char *temp;
         BSTCheckNumAndPosition(sym, node->left);
         bool pass = true;
         int currCount = 0;
         if(node->tiePass) {
             pass = true;
             currCount = 0;
-            tempWord = searchWordByIndex(node->index, node->position);
+            temp = searchWordByIndex(node->index, node->position);
             for (int j = 0; j < wordLength; j++) {
-                if (sym->mustBeIn != NULL && sym->mustBeIn[j] && tempWord[j] != sym->ch) {
+                if (sym->mustBeIn != NULL && sym->mustBeIn[j] && temp[j] != sym->ch) {
                     pass = false;
                     break;
                 }
-                if (sym->mustNotBeIn != NULL && sym->mustNotBeIn[j] && tempWord[j] == sym->ch) {
+                if (sym->mustNotBeIn != NULL && sym->mustNotBeIn[j] && temp[j] == sym->ch) {
                     pass = false;
                     break;
                 }
-                if (sym->ch == tempWord[j]) currCount++;
+                if (sym->ch == temp[j]) currCount++;
             }
             if (pass) {
                 if (sym->exactTimes) {
@@ -178,6 +181,8 @@ void BSTCheckNumAndPosition(symbol *sym, BSTNode *node) {
 void resetSymTable(){
     for(int i=0;i<SYM_TABLE_SIZE;i++){
         if(symTable[i] != NULL){
+            free(symTable[i]->mustBeIn);
+            free(symTable[i]->mustNotBeIn);
             free(symTable[i]);
             symTable[i] = NULL;
         }
@@ -223,8 +228,8 @@ BSTNode *insertInOrder(int index, int position) {
     }
 }
 
-void insertWordNode(wordNode *toInsert, int index){
-    wordNode *newNode = initWordNode(toInsert->word);
+void insertWordNode(const char *toInsert, int index){
+    wordNode *newNode = initWordNode(toInsert);
     int position = 0;
     if (hashTable[index] == NULL){
         //newNode->position = 0;
@@ -243,15 +248,14 @@ void insertWordNode(wordNode *toInsert, int index){
     root = BSTInsert(root, index, position);
 }
 
-wordNode *initWordNode(char word[]){
-    wordNode *node = (wordNode*)malloc(sizeof(wordNode));
-    if(node == NULL){
-        printf("memory error\n");
-        exit(1);
-    }
-    node->word = malloc(wordLength*sizeof(char));
+wordNode *initWordNode(const char *toInsert){
+    wordNode *node;
+    node = (wordNode*)malloc(sizeof(wordNode));
+    node->word = malloc(wordLength*sizeof(char*));
     for(int i=0;i<wordLength;i++){
-        node->word[i]=word[i];
+        //printf("char to insert: %c\n", toInsert[i]);
+        //node->word[i]='A';
+        node->word[i]=toInsert[i];
     }
     node->word[wordLength] = '\0';
     node->next = NULL;
@@ -408,16 +412,18 @@ void tiePassCheck(){
     }
 }
 
-const char  *compareWords(const char * r, const char * s) {
-    char *result;
-    result = (char*)malloc(wordLength*sizeof(char));
+void  compareWords(const char * r, const char * s) {
+    //char *result;
+    //result = malloc(wordLength*sizeof(char*));
+    bool used[wordLength];
     for (int i = 0; i < wordLength; i++){
         result[i] = '/';
         resetCurrTimes(s[i]);
+        used[i] = false;
     }
-    result[wordLength] = '\0';
+    //result[wordLength] = '\0';
     //a set of flags indicating if that letter in the answer is used as clue
-    bool used[wordLength];
+    //bool used[wordLength];
     int rightCount=0;
     //first pass, look for exact matches
     for (int i = 0; i < wordLength; i++) {
@@ -429,7 +435,12 @@ const char  *compareWords(const char * r, const char * s) {
             increaseSymCount(s[i]);
         }
     }
-    if (rightCount == wordLength) return "ok";
+    if (rightCount == wordLength) {
+        result[0] = 'o';
+        result[1] = 'k';
+        for(int i=2;i<wordLength;i++) result[i] = '\0';
+        return;
+    }
     //second pass, look for there but elsewhere
     for (int i = 0; i < wordLength; i++) {
         if (result[i] == '/') {
@@ -462,16 +473,15 @@ const char  *compareWords(const char * r, const char * s) {
             }
         }
     }
-    return result;
+    return;
 }
 
 
 void startNewMatch(){
     bool found=false;
     char toBeFound[wordLength];
-    char input[wordLength];
     char endInput = 0;
-    const char *result;
+    //const char *result;
     wordNode *searched;
     BSTReset(root);
     resetSymTable();
@@ -480,12 +490,12 @@ void startNewMatch(){
     for(int i=0;i<wordLength;i++){
         toBeFound[i] = getchar();
     }
-    toBeFound[wordLength] = '\0';
+    //toBeFound[wordLength] = '\0';
     //printf("to be found = %s\n", toBeFound);
     if(scanf("%d\n", &attempts)>0);
     //printf("attempts = %d\n", attempts);
     while (attempts > 0) {
-        result = 0;
+        //result = 0;
         input[0] = getchar();
         if(input[0] == '+'){
             executeCommand();
@@ -502,7 +512,7 @@ void startNewMatch(){
                 attempts++;
             }
             else{
-                result = compareWords(toBeFound, searched->word);
+                compareWords(toBeFound, searched->word);
                 printf("%s\n", result);
                 if(result!=NULL && !(result[0]=='o'|| result[0]=='k')) {
                     tiePassCheck();
@@ -552,8 +562,9 @@ void executeCommand(){
 }
 
 void addToDictionary(){
-    char input[wordLength];
-    wordNode *toInsert;
+
+
+    //wordNode *toInsert;
     int index;
     while (1) {
         getchar();
@@ -562,9 +573,9 @@ void addToDictionary(){
         for (int j = 1; j < wordLength; j++)
             input[j] = getchar();
         input[wordLength] = '\0';
-        toInsert = initWordNode(input);
+        //toInsert = initWordNode(input);
         index = hash(input) % TABLE_SIZE;
-        insertWordNode(toInsert, index);
+        insertWordNode(input, index);
         wordCount++;
         totalWordCount++;
         //printf("INSERT - wordCount = %d (total = %d)\n", wordCount,  totalWordCount);
@@ -580,8 +591,12 @@ int main(void){
     if(scanf("%d", &wordLength)>0);
     wordCount = 0;
     totalWordCount = 0;
-    tempWord=(char*)malloc(wordLength*sizeof(char));
-    tempWord[wordLength] = '\0';
+    //tempWord=malloc(wordLength*sizeof(char*));
+    input = malloc(wordLength*sizeof(char*));
+    result = malloc(wordLength*sizeof(char*));
+    //tempWord[wordLength] = '\0';
     addToDictionary();
+
+
     return 0;
 }
