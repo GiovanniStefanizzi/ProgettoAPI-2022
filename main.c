@@ -73,10 +73,15 @@ BSTNode *BSTInit(){
     newNode->right=NULL;
     newNode->tiePass=true;
     newNode->nextPass=NULL;
-    if(lastOfTheList==NULL) lastOfTheList = newNode;
+    if(lastOfTheList==NULL){
+        lastOfTheList = newNode;
+        lastToPass=lastOfTheList;
+    }
     else {
         lastOfTheList->next = newNode;
+        lastToPass -> nextPass= newNode;
         lastOfTheList = newNode;
+        lastToPass = newNode;
     }
     return newNode;
 }
@@ -239,67 +244,79 @@ void setExactTimes(char c, bool val){
 
 void tiePassCheck(){
     symbol *sym;
-        for (int i = 0; i < SYM_TABLE_SIZE; i++) {
-            sym = symTable[i];
-            if (sym != NULL) {
-                BSTNode *temp = root;
-                if (!sym->contains) {
-                    while(temp != NULL) {
-                        if (contains(temp->word, sym->ch)) {
-                            temp->tiePass = false;
-                            //TODO:point to nextPass
-                            if(temp==firstToPass){
-                                lastChecked=NULL;
-                                firstToPass=temp->nextPass;
-                            }
-                            else if(temp==lastToPass){
-                                lastToPass=lastChecked;
-                                if(lastToPass!=NULL) lastToPass->nextPass = NULL;
-                            }
-                            else{
-                                lastChecked->nextPass=temp->nextPass;
-                            }
-                            wordCount--;
+    for (int i = 0; i < SYM_TABLE_SIZE; i++) {
+        sym = symTable[i];
+        if (sym != NULL) {
+            BSTNode *temp = firstToPass;
+            if (!sym->contains) {
+                while(temp != NULL) {
+                    if (contains(temp->word, sym->ch)) {
+                        temp->tiePass = false;
+                        //TODO:point to nextPass
+                        if(temp==firstToPass){
+                            lastChecked=NULL;
+                            firstToPass=temp->nextPass;
                         }
-                        temp = temp->nextPass;
+                        else if(temp==lastToPass){
+                            lastToPass=lastChecked;
+                            if(lastToPass!=NULL) lastToPass->nextPass = NULL;
+                        }
+                        else{
+                            if(lastChecked!=NULL)lastChecked->nextPass=temp->nextPass;
+                        }
+                        wordCount--;
                     }
+                    else lastChecked = temp;
+                    temp = temp->nextPass;
                 }
-                else {
-                    while(temp != NULL){
-                        char *tempWord;
-                        bool pass = true;
-                        int currCount = 0;
-                            pass = true;
-                            currCount = 0;
-                            tempWord = temp->word;
-                            for (int j = 0; j < wordLength; j++) {
-                                if (sym->mustBeIn != NULL && sym->mustBeIn[j] && tempWord[j] != sym->ch) {
-                                    pass = false;
-                                    break;
-                                }
-                                if (sym->mustNotBeIn != NULL && sym->mustNotBeIn[j] && tempWord[j] == sym->ch) {
-                                    pass = false;
-                                    break;
-                                }
-                                if (sym->ch == tempWord[j]) currCount++;
-                            }
-                            if (pass) {
-                                if (sym->exactTimes) {
-                                    if (sym->times != currCount) pass = false;
-                                } else {
-                                    if (currCount < sym->times) pass = false;
-                                }
-                            }
-
-                            if (!pass) {
-                                wordCount--;
-                                temp->tiePass = false;
-                            }
-                        temp = temp->nextPass;
+            }
+            else {
+                while(temp != NULL){
+                    char *tempWord;
+                    bool pass = true;
+                    int currCount = 0;
+                    pass = true;
+                    currCount = 0;
+                    tempWord = temp->word;
+                    for (int j = 0; j < wordLength; j++) {
+                        if (sym->mustBeIn != NULL && sym->mustBeIn[j] && tempWord[j] != sym->ch) {
+                            pass = false;
+                            break;
+                        }
+                        if (sym->mustNotBeIn != NULL && sym->mustNotBeIn[j] && tempWord[j] == sym->ch) {
+                            pass = false;
+                            break;
+                        }
+                        if (sym->ch == tempWord[j]) currCount++;
                     }
+                    if (pass) {
+                        if (sym->exactTimes) {
+                            if (sym->times != currCount) pass = false;
+                        } else {
+                            if (currCount < sym->times) pass = false;
+                        }
+                    }
+
+                    if (!pass) {
+                        wordCount--;
+                        temp->tiePass = false;
+                        if(temp==firstToPass){
+                            lastChecked=NULL;
+                            firstToPass=temp->nextPass;
+                        }
+                        else if(temp==lastToPass){
+                            lastToPass=lastChecked;
+                            if(lastToPass!=NULL) lastToPass->nextPass = NULL;
+                        }
+                        else{
+                            if(lastChecked!=NULL)lastChecked->nextPass=temp->nextPass;
+                        }
+                    }else lastChecked = temp;
+                    temp = temp->nextPass;
                 }
             }
         }
+    }
 }
 
 void  compareWords(const char * r, const char * s) {
