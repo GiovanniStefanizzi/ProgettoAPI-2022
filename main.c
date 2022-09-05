@@ -99,19 +99,20 @@ BSTNode *BSTAlloc(BSTNode *node){
 }
 
 BSTNode *BSTRealloc(BSTNode *node){
-
+    
     BSTNode *temp;
-
-
-    for(int i=0;i<allocCnt;i++){
+    temp=root;
+    
+    
+    for(int i=0;i<allocCnt-1;i++){
         temp = &temp[4095];
         temp = temp->next;
     }
-
-    temp = &root[4095];
+    
+    temp = &temp[4095];
     temp->next = (BSTNode*)malloc(4096*sizeof(BSTNode));
     temp = temp->next;
-
+    
     allocCnt++;
     memCnt=4096;
     return node;
@@ -120,25 +121,25 @@ BSTNode *BSTRealloc(BSTNode *node){
 
 BSTNode *BSTInsert(BSTNode *node){
     if(node==NULL && allocCnt==0) root = BSTAlloc(root);
-
+   
     if(node==NULL){
-
+    
         memCnt--;
         if(totalWordCount != 0 && totalWordCount%4096 == 0){
             //reallocate
             root = BSTRealloc(root);
-        }
+    	}
         BSTNode *temp = root;
         for(int i=0;i<allocCnt-1;i++){
-            printf("*");
-            temp = &temp[4095];
-            temp = temp->next;
+         //printf("*");
+         temp = &temp[4095];
+         temp = temp->next;
         }
         //printf("%s\n", temp->word);
-        int index = totalWordCount-((allocCnt-1)<<12);
-        printf("%d \n", index);
+        int index = totalWordCount-((allocCnt-1)<<12); 
+        //printf("%d \n", index);
         return BSTInit(&temp[index]);
-
+        
     }
     if(isLessThan(input, node->word)) {
         node->left =  BSTInsert(node->left);
