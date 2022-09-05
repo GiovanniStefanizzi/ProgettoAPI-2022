@@ -27,11 +27,15 @@ symbol *symTable[SYM_TABLE_SIZE];
 char *input;
 char *result;
 
+
 BSTNode *root=NULL;
 BSTNode *lastOfTheList;
 BSTNode *firstToPass;
 BSTNode *lastToPass;
 BSTNode *lastChecked;
+
+int memCnt=0;
+int allocCnt=0;
 
 void executeCommand();
 void addToDictionary();
@@ -60,36 +64,57 @@ bool isEqual(const char *a, const char *b){
     return true;
 }
 
-BSTNode *BSTInit(){
-    BSTNode *newNode;
-    newNode = (BSTNode*)malloc(sizeof(BSTNode));
-    newNode->word=malloc(wordLength*sizeof(char*));
+BSTNode *BSTInit (BSTNode *node){
+    node->word=malloc(wordLength*sizeof(char*));
     for(int i=0;i<wordLength;i++){
-        newNode->word[i]=input[i];
+        node->word[i]=input[i];
     }
-    newNode->word[wordLength]='\0';
-    newNode->next=NULL;
-    newNode->left=NULL;
-    newNode->right=NULL;
-    newNode->tiePass=true;
-    newNode->nextPass=NULL;
+    node->word[wordLength]='\0';
+    node->next=NULL;
+    node->left=NULL;
+    node->right=NULL;
+    node->tiePass=true;
+    node->nextPass=NULL;
     if(lastOfTheList==NULL){
-        lastOfTheList = newNode;
+        lastOfTheList = node;
         lastToPass=lastOfTheList;
     }
     else {
-        lastOfTheList->next = newNode;
-        lastToPass -> nextPass= newNode;
-        lastOfTheList = newNode;
-        lastToPass = newNode;
+        lastOfTheList->next = node;
+        lastToPass -> nextPass= node;
+        lastOfTheList = node;
+        lastToPass = node;
     }
-    return newNode;
+    return node;
+}
+
+BSTNode *BSTAlloc(BSTNode *node){
+    node = (BSTNode*)malloc(4096*sizeof(BSTNode));
+    memCnt=4096;
+    allocCnt=1;
+    return node;
+}
+
+BSTNode *BSTRealloc(BSTNode *node){
+    realloc(node,(allocCnt+1)*4096*sizeof(BSTNode));
+    allocCnt++;
+    memCnt=4096;
+    return node;
 }
 
 
 BSTNode *BSTInsert(BSTNode *node){
-    if(node==NULL){
-        return BSTInit();
+    if(memCnt==0){//allocate memory
+        if(allocCnt==0){//malloc
+            root = BSTAlloc(root);
+        }
+        else{//reallocate
+            root = BSTRealloc(root);
+        }
+    }
+    if(node->word==NULL){
+        memCnt--;
+        return BSTInit(&root[totalWordCount]);
     }
     if(isLessThan(input, node->word)) {
         node->left =  BSTInsert(node->left);
@@ -252,7 +277,6 @@ void tiePassCheck(){
                 while(temp != NULL) {
                     if (contains(temp->word, sym->ch)) {
                         temp->tiePass = false;
-                        //TODO:point to nextPass
                         if(temp==firstToPass){
                             lastChecked=NULL;
                             firstToPass=temp->nextPass;
