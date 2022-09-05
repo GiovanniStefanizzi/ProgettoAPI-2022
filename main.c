@@ -6,6 +6,7 @@
 typedef struct BSTNode{
     char *word;
     bool tiePass;
+    bool taken;
     struct BSTNode *left, *right, *next, *nextPass;
 }BSTNode;
 
@@ -75,6 +76,7 @@ BSTNode *BSTInit (BSTNode *node){
     node->right=NULL;
     node->tiePass=true;
     node->nextPass=NULL;
+    node->taken=true;
     if(lastOfTheList==NULL){
         lastOfTheList = node;
         lastToPass=lastOfTheList;
@@ -90,13 +92,26 @@ BSTNode *BSTInit (BSTNode *node){
 
 BSTNode *BSTAlloc(BSTNode *node){
     node = (BSTNode*)malloc(4096*sizeof(BSTNode));
+    for(int i =0;i<4096;i++) node[i].taken=false;
     memCnt=4096;
     allocCnt=1;
     return node;
 }
 
 BSTNode *BSTRealloc(BSTNode *node){
-    realloc(node,(allocCnt+1)*4096*sizeof(BSTNode));
+
+    BSTNode *temp;
+
+
+    for(int i=0;i<allocCnt;i++){
+        temp = &temp[4095];
+        temp = temp->next;
+    }
+
+    temp = &root[4095];
+    temp->next = (BSTNode*)malloc(4096*sizeof(BSTNode));
+    temp = temp->next;
+
     allocCnt++;
     memCnt=4096;
     return node;
@@ -104,17 +119,26 @@ BSTNode *BSTRealloc(BSTNode *node){
 
 
 BSTNode *BSTInsert(BSTNode *node){
-    if(memCnt==0){//allocate memory
-        if(allocCnt==0){//malloc
-            root = BSTAlloc(root);
-        }
-        else{//reallocate
+    if(node==NULL && allocCnt==0) root = BSTAlloc(root);
+
+    if(node==NULL){
+
+        memCnt--;
+        if(totalWordCount != 0 && totalWordCount%4096 == 0){
+            //reallocate
             root = BSTRealloc(root);
         }
-    }
-    if(node->word==NULL){
-        memCnt--;
-        return BSTInit(&root[totalWordCount]);
+        BSTNode *temp = root;
+        for(int i=0;i<allocCnt-1;i++){
+            printf("*");
+            temp = &temp[4095];
+            temp = temp->next;
+        }
+        //printf("%s\n", temp->word);
+        int index = totalWordCount-((allocCnt-1)<<12);
+        printf("%d \n", index);
+        return BSTInit(&temp[index]);
+
     }
     if(isLessThan(input, node->word)) {
         node->left =  BSTInsert(node->left);
