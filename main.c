@@ -4,10 +4,9 @@
 #define SYM_TABLE_SIZE 64
 
 typedef struct BSTNode{
-    char *word;
     bool tiePass;
-    bool taken;
     struct BSTNode *left, *right, *next, *nextPass;
+    char word[];
 }BSTNode;
 
 typedef struct{
@@ -35,7 +34,6 @@ BSTNode *firstToPass;
 BSTNode *lastToPass;
 BSTNode *lastChecked;
 
-int memCnt=0;
 int allocCnt=0;
 
 void executeCommand();
@@ -66,17 +64,17 @@ bool isEqual(const char *a, const char *b){
 }
 
 BSTNode *BSTInit (BSTNode *node){
-    node->word=malloc(wordLength*sizeof(char*));
+    //node->word=malloc(wordLength*sizeof(char*));
     for(int i=0;i<wordLength;i++){
+        printf("%c", input[i]);
         node->word[i]=input[i];
     }
-    node->word[wordLength]='\0';
+    //node->word[wordLength]='\0';
     node->next=NULL;
     node->left=NULL;
     node->right=NULL;
     node->tiePass=true;
     node->nextPass=NULL;
-    node->taken=true;
     if(lastOfTheList==NULL){
         lastOfTheList = node;
         lastToPass=lastOfTheList;
@@ -91,55 +89,38 @@ BSTNode *BSTInit (BSTNode *node){
 }
 
 BSTNode *BSTAlloc(BSTNode *node){
-    node = (BSTNode*)malloc(4096*sizeof(BSTNode));
-    for(int i =0;i<4096;i++) node[i].taken=false;
-    memCnt=4096;
+    node = (BSTNode*)malloc((sizeof(BSTNode)+(wordLength+1)*sizeof(char))<<12);
     allocCnt=1;
     return node;
 }
 
 BSTNode *BSTRealloc(BSTNode *node){
-    
     BSTNode *temp;
     temp=root;
-    
-    
     for(int i=0;i<allocCnt-1;i++){
         temp = &temp[4095];
         temp = temp->next;
     }
-    
     temp = &temp[4095];
-    temp->next = (BSTNode*)malloc(4096*sizeof(BSTNode));
-    temp = temp->next;
-    
+    temp->next = (BSTNode*)malloc(sizeof(BSTNode)<<12);
     allocCnt++;
-    memCnt=4096;
     return node;
 }
 
 
 BSTNode *BSTInsert(BSTNode *node){
-    if(node==NULL && allocCnt==0) root = BSTAlloc(root);
-   
     if(node==NULL){
-    
-        memCnt--;
+        if(allocCnt==0)root = BSTAlloc(root);
         if(totalWordCount != 0 && totalWordCount%4096 == 0){
             //reallocate
             root = BSTRealloc(root);
-    	}
+        }
         BSTNode *temp = root;
         for(int i=0;i<allocCnt-1;i++){
-         //printf("*");
-         temp = &temp[4095];
-         temp = temp->next;
+            temp = &temp[4095];
+            temp = temp->next;
         }
-        //printf("%s\n", temp->word);
-        int index = totalWordCount-((allocCnt-1)<<12); 
-        //printf("%d \n", index);
-        return BSTInit(&temp[index]);
-        
+        return BSTInit(&temp[totalWordCount-((allocCnt-1)<<12)]);
     }
     if(isLessThan(input, node->word)) {
         node->left =  BSTInsert(node->left);
@@ -427,7 +408,7 @@ void startNewMatch(){
     char toBeFound[wordLength];
     char endInput = 0;
     BSTNode *searched;
-    BSTReset(root);
+    BSTReset();
     resetSymTable();
     wordCount = totalWordCount;
     while(getchar()!='\n') continue;
@@ -501,7 +482,7 @@ void addToDictionary(){
     while (1) {
         getchar();
         input[0] = getchar();
-        if(input[0] == '+') break;
+        if (input[0] == '+') break;
         for (int j = 1; j < wordLength; j++)
             input[j] = getchar();
         input[wordLength] = '\0';
