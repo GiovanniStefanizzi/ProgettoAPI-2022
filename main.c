@@ -365,7 +365,8 @@ void  compareWords(const char * r, const char * s) {
             }
             else{
                 if(sym==NULL) setContains(s[i], false);
-                else if(sym -> contains != true)setContains(s[i], false);
+                else if(sym -> contains != true) setContains(s[i], false);
+                else if(sym -> contains == true) mustNotBeIn(s[i], i);
             }
         }
     }
@@ -385,6 +386,7 @@ void startNewMatch(){
     for(int i=0;i<wordLength;i++){
         toBeFound[i] = getchar();
     }
+    //printf("to be found = %s\n", toBeFound);
     if(scanf("%d\n", &attempts)>0);
     while (attempts > 0 && !found) {
         input[0] = getchar();
