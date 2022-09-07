@@ -26,15 +26,13 @@ int attempts = 0;
 symbol *symTable[SYM_TABLE_SIZE];
 char *input;
 char *result;
-
+bool started=false;
 
 BSTNode *root=NULL;
 BSTNode *lastOfTheList;
 BSTNode *firstToPass;
 BSTNode *lastToPass;
 BSTNode *lastChecked;
-
-int allocCnt=0;
 
 void executeCommand();
 void addToDictionary();
@@ -63,64 +61,35 @@ bool isEqual(const char *a, const char *b){
     return true;
 }
 
-BSTNode *BSTInit (BSTNode *node){
-    //node->word=malloc(wordLength*sizeof(char*));
+BSTNode *BSTInit(){
+    BSTNode *newNode;
+    newNode = (BSTNode*)malloc(sizeof(BSTNode)+wordLength+1);
     for(int i=0;i<wordLength;i++){
-        printf("%c", input[i]);
-        node->word[i]=input[i];
+        newNode->word[i]=input[i];
     }
-    //node->word[wordLength]='\0';
-    node->next=NULL;
-    node->left=NULL;
-    node->right=NULL;
-    node->tiePass=true;
-    node->nextPass=NULL;
+    newNode->word[wordLength]='\0';
+    newNode->next=NULL;
+    newNode->left=NULL;
+    newNode->right=NULL;
+    newNode->tiePass=true;
+    newNode->nextPass=NULL;
     if(lastOfTheList==NULL){
-        lastOfTheList = node;
+        lastOfTheList = newNode;
         lastToPass=lastOfTheList;
     }
     else {
-        lastOfTheList->next = node;
-        lastToPass -> nextPass= node;
-        lastOfTheList = node;
-        lastToPass = node;
+        lastOfTheList->next = newNode;
+        lastToPass -> nextPass= newNode;
+        lastOfTheList = newNode;
+        lastToPass = newNode;
     }
-    return node;
-}
-
-BSTNode *BSTAlloc(BSTNode *node){
-    node = (BSTNode*)malloc((sizeof(BSTNode)+(wordLength+1)*sizeof(char))<<12);
-    allocCnt=1;
-    return node;
-}
-
-BSTNode *BSTRealloc(BSTNode *node){
-    BSTNode *temp;
-    temp=root;
-    for(int i=0;i<allocCnt-1;i++){
-        temp = &temp[4095];
-        temp = temp->next;
-    }
-    temp = &temp[4095];
-    temp->next = (BSTNode*)malloc(sizeof(BSTNode)<<12);
-    allocCnt++;
-    return node;
+    return newNode;
 }
 
 
 BSTNode *BSTInsert(BSTNode *node){
     if(node==NULL){
-        if(allocCnt==0)root = BSTAlloc(root);
-        if(totalWordCount != 0 && totalWordCount%4096 == 0){
-            //reallocate
-            root = BSTRealloc(root);
-        }
-        BSTNode *temp = root;
-        for(int i=0;i<allocCnt-1;i++){
-            temp = &temp[4095];
-            temp = temp->next;
-        }
-        return BSTInit(&temp[totalWordCount-((allocCnt-1)<<12)]);
+        return BSTInit();
     }
     if(isLessThan(input, node->word)) {
         node->left =  BSTInsert(node->left);
@@ -404,6 +373,7 @@ void  compareWords(const char * r, const char * s) {
 }
 
 void startNewMatch(){
+    started = true;
     bool found=false;
     char toBeFound[wordLength];
     char endInput = 0;
@@ -416,7 +386,7 @@ void startNewMatch(){
         toBeFound[i] = getchar();
     }
     if(scanf("%d\n", &attempts)>0);
-    while (attempts > 0) {
+    while (attempts > 0 && !found) {
         input[0] = getchar();
         if(input[0] == '+'){
             executeCommand();
@@ -438,13 +408,16 @@ void startNewMatch(){
                     tiePassCheck();
                     printf("%d\n", wordCount);
                 }
-                else found=true;
+                else {
+                    found=true;
+                    break;
+                }
             }
             getchar();
             attempts--;
         }
     }
-    if(!found) {
+    if(!found&&attempts==0) {
         printf("ko\n");
     }
     while(endInput!=EOF) {
@@ -468,7 +441,11 @@ void executeCommand(){
             addToDictionary();
         }
         else{
-            for(int i=0;i<4;i++) getchar();
+            if(started)for(int i=0;i<4;i++) getchar();
+            else{
+                for(int i=0;i<3;i++) getchar();
+                addToDictionary();
+            }
         }
     }
     if(command[0]=='s') {
@@ -482,7 +459,7 @@ void addToDictionary(){
     while (1) {
         getchar();
         input[0] = getchar();
-        if (input[0] == '+') break;
+        if(input[0] == '+') break;
         for (int j = 1; j < wordLength; j++)
             input[j] = getchar();
         input[wordLength] = '\0';
